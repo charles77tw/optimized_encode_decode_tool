@@ -841,6 +841,11 @@
                         <label>
                             <input type="checkbox" id="addTimestamp"> 添加時間戳記
                         </label>
+                        <br>
+                        <label>
+                            <input type="checkbox" id="enableEncryption" onclick="document.getElementById('encryptionPassword').style.display = this.checked ? 'block' : 'none';"> 啟用加密
+                        </label>
+                        <input type="password" id="encryptionPassword" placeholder="輸入密碼" style="display:none; margin-top:5px;">
                     </div>
                 </div>
 
@@ -947,6 +952,11 @@
                         <label>
                             <input type="checkbox" id="autoDetectFormat" checked> 自動偵測格式
                         </label>
+                        <br>
+                        <label>
+                            <input type="checkbox" id="enableDecryption" onclick="document.getElementById('decryptionPassword').style.display = this.checked ? 'block' : 'none';"> 啟用解密
+                        </label>
+                        <input type="password" id="decryptionPassword" placeholder="輸入密碼" style="display:none; margin-top:5px;">
                     </div>
                 </div>
 
@@ -1313,6 +1323,62 @@
             return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
         }
 
+        // Encryption utilities using Web Crypto API
+        async function deriveKey(password, salt) {
+            const enc = new TextEncoder();
+            const keyMaterial = await crypto.subtle.importKey(
+                'raw',
+                enc.encode(password),
+                'PBKDF2',
+                false,
+                ['deriveKey']
+            );
+            return crypto.subtle.deriveKey(
+                {
+                    name: 'PBKDF2',
+                    salt,
+                    iterations: 100000,
+                    hash: 'SHA-256'
+                },
+                keyMaterial,
+                {
+                    name: 'AES-GCM',
+                    length: 256
+                },
+                false,
+                ['encrypt', 'decrypt']
+            );
+        }
+
+        async function encryptData(data, password) {
+            const salt = crypto.getRandomValues(new Uint8Array(16));
+            const iv = crypto.getRandomValues(new Uint8Array(12));
+            const key = await deriveKey(password, salt);
+            const encrypted = await crypto.subtle.encrypt(
+                { name: 'AES-GCM', iv },
+                key,
+                data
+            );
+            const result = new Uint8Array(salt.byteLength + iv.byteLength + encrypted.byteLength);
+            result.set(salt, 0);
+            result.set(iv, salt.byteLength);
+            result.set(new Uint8Array(encrypted), salt.byteLength + iv.byteLength);
+            return result.buffer;
+        }
+
+        async function decryptData(data, password) {
+            const dataArray = new Uint8Array(data);
+            const salt = dataArray.slice(0, 16);
+            const iv = dataArray.slice(16, 28);
+            const ciphertext = dataArray.slice(28);
+            const key = await deriveKey(password, salt);
+            return crypto.subtle.decrypt(
+                { name: 'AES-GCM', iv },
+                key,
+                ciphertext
+            );
+        }
+
         async function encodeFile() {
             const fileInput = document.getElementById('encodeFile');
             const file = fileInput.files[0];
@@ -1383,7 +1449,17 @@
                     const timestamp = new Date().toISOString();
                     encodedString = `[${timestamp}]\n${encodedString}`;
                 }
-                
+
+                const enableEncryption = document.getElementById('enableEncryption').checked;
+                if (enableEncryption) {
+                    const password = document.getElementById('encryptionPassword').value;
+                    if (!password) {
+                        throw new Error('請輸入密碼');
+                    }
+                    const encryptedBuffer = await encryptData(new TextEncoder().encode(encodedString), password);
+                    encodedString = await arrayBufferToBase64(encryptedBuffer);
+                }
+
                 document.getElementById('encodedText').value = encodedString;
                 showStatus('encodeStatus', '✅ 編碼完成！', 'success');
                 showToast('編碼成功完成！', 'success');
@@ -1440,10 +1516,27 @@
         async function decodeText() {
             const decodeTextArea = document.getElementById('decodeText');
             let encodedText = decodeTextArea.value.trim();
-            
+
             if (!encodedText) {
                 showStatus('decodeStatus', '❌ 請輸入要解碼的文字', 'error');
                 return;
+            }
+
+            const enableDecryption = document.getElementById('enableDecryption').checked;
+            if (enableDecryption) {
+                const password = document.getElementById('decryptionPassword').value;
+                if (!password) {
+                    showStatus('decodeStatus', '❌ 請輸入密碼', 'error');
+                    return;
+                }
+                try {
+                    const encryptedBuffer = base64ToArrayBuffer(encodedText);
+                    const decryptedBuffer = await decryptData(encryptedBuffer, password);
+                    encodedText = new TextDecoder().decode(decryptedBuffer);
+                } catch (e) {
+                    showStatus('decodeStatus', '❌ 解密失敗：密碼錯誤或資料損毀', 'error');
+                    return;
+                }
             }
 
             // 移除時間戳記（如果有的話）
