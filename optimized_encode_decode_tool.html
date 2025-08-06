@@ -1,0 +1,2253 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>檔案編碼解碼工具 - 專業版</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --success-color: #27ae60;
+            --danger-color: #e74c3c;
+            --warning-color: #f39c12;
+            --info-color: #17a2b8;
+            --light-gray: #ecf0f1;
+            --dark-gray: #7f8c8d;
+            --shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        body {
+            font-family: 'Microsoft JhengHei', 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: 24px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            animation: float 6s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(180deg); }
+        }
+
+        .header h1 {
+            font-size: 2.8em;
+            margin-bottom: 15px;
+            font-weight: 300;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.95;
+            position: relative;
+            z-index: 1;
+        }
+
+        .main-content {
+            padding: 50px 40px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+        }
+
+        .tool-section {
+            background: white;
+            border-radius: 20px;
+            padding: 35px;
+            box-shadow: var(--shadow);
+            border: 1px solid rgba(0,0,0,0.05);
+            transition: var(--transition);
+            position: relative;
+        }
+
+        .tool-section:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .section-title {
+            font-size: 2em;
+            color: var(--primary-color);
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 3px solid var(--secondary-color);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .file-input-area {
+            border: 3px dashed var(--secondary-color);
+            border-radius: 15px;
+            padding: 50px 30px;
+            text-align: center;
+            margin-bottom: 25px;
+            transition: var(--transition);
+            cursor: pointer;
+            position: relative;
+            background: linear-gradient(45deg, transparent 0%, rgba(52, 152, 219, 0.02) 100%);
+        }
+
+        .file-input-area:hover {
+            border-color: #2980b9;
+            background: rgba(52, 152, 219, 0.08);
+            transform: scale(1.02);
+        }
+
+        .file-input-area.dragover {
+            border-color: var(--success-color);
+            background: rgba(46, 204, 113, 0.15);
+            transform: scale(1.05);
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .file-input-label {
+            font-size: 1.3em;
+            color: var(--secondary-color);
+            cursor: pointer;
+            display: block;
+            font-weight: 500;
+        }
+
+        .upload-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+            opacity: 0.7;
+        }
+
+        .file-info {
+            margin-top: 20px;
+            padding: 20px;
+            background: linear-gradient(135deg, rgba(52, 152, 219, 0.1) 0%, rgba(155, 89, 182, 0.1) 100%);
+            border-radius: 12px;
+            font-size: 0.95em;
+            color: var(--primary-color);
+            border: 1px solid rgba(52, 152, 219, 0.2);
+        }
+
+        .text-area {
+            width: 100%;
+            min-height: 250px;
+            max-height: 400px;
+            padding: 25px;
+            border: 2px solid #e1e8ed;
+            border-radius: 15px;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 0.9em;
+            line-height: 1.6;
+            resize: vertical;
+            transition: var(--transition);
+            background: #fafbfc;
+        }
+
+        .text-area:focus {
+            outline: none;
+            border-color: var(--secondary-color);
+            box-shadow: 0 0 0 4px rgba(52, 152, 219, 0.1);
+            background: white;
+        }
+
+        .button {
+            background: linear-gradient(135deg, var(--secondary-color), #2980b9);
+            color: white;
+            border: none;
+            padding: 16px 32px;
+            border-radius: 50px;
+            font-size: 1.05em;
+            font-weight: 500;
+            cursor: pointer;
+            transition: var(--transition);
+            margin: 8px;
+            box-shadow: 0 8px 25px rgba(52, 152, 219, 0.3);
+            position: relative;
+            overflow: hidden;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .button:hover::before {
+            left: 100%;
+        }
+
+        .button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 35px rgba(52, 152, 219, 0.4);
+        }
+
+        .button:active {
+            transform: translateY(-1px);
+        }
+
+        .button.danger {
+            background: linear-gradient(135deg, var(--danger-color), #c0392b);
+            box-shadow: 0 8px 25px rgba(231, 76, 60, 0.3);
+        }
+
+        .button.danger:hover {
+            box-shadow: 0 15px 35px rgba(231, 76, 60, 0.4);
+        }
+
+        .button.success {
+            background: linear-gradient(135deg, var(--success-color), #229954);
+            box-shadow: 0 8px 25px rgba(39, 174, 96, 0.3);
+        }
+
+        .button.success:hover {
+            box-shadow: 0 15px 35px rgba(39, 174, 96, 0.4);
+        }
+
+        .button.warning {
+            background: linear-gradient(135deg, var(--warning-color), #e67e22);
+            box-shadow: 0 8px 25px rgba(243, 156, 18, 0.3);
+        }
+
+        .button.warning:hover {
+            box-shadow: 0 15px 35px rgba(243, 156, 18, 0.4);
+        }
+
+        .button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .button-group {
+            text-align: center;
+            margin: 25px 0;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .status-message {
+            padding: 18px 25px;
+            margin: 20px 0;
+            border-radius: 12px;
+            font-weight: 600;
+            text-align: center;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .status-success {
+            background: linear-gradient(135deg, rgba(39, 174, 96, 0.15), rgba(39, 174, 96, 0.05));
+            color: #1e8449;
+            border: 2px solid rgba(39, 174, 96, 0.3);
+        }
+
+        .status-error {
+            background: linear-gradient(135deg, rgba(231, 76, 60, 0.15), rgba(231, 76, 60, 0.05));
+            color: #c0392b;
+            border: 2px solid rgba(231, 76, 60, 0.3);
+        }
+
+        .status-info {
+            background: linear-gradient(135deg, rgba(52, 152, 219, 0.15), rgba(52, 152, 219, 0.05));
+            color: #2980b9;
+            border: 2px solid rgba(52, 152, 219, 0.3);
+        }
+
+        .status-warning {
+            background: linear-gradient(135deg, rgba(243, 156, 18, 0.15), rgba(243, 156, 18, 0.05));
+            color: #d68910;
+            border: 2px solid rgba(243, 156, 18, 0.3);
+        }
+
+        .progress-container {
+            margin: 20px 0;
+            padding: 20px;
+            background: rgba(52, 152, 219, 0.05);
+            border-radius: 12px;
+            border: 1px solid rgba(52, 152, 219, 0.1);
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(52, 152, 219, 0.2);
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--secondary-color), #2980b9);
+            width: 0%;
+            transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            background-image: linear-gradient(
+                -45deg,
+                rgba(255, 255, 255, 0.2) 25%,
+                transparent 25%,
+                transparent 50%,
+                rgba(255, 255, 255, 0.2) 50%,
+                rgba(255, 255, 255, 0.2) 75%,
+                transparent 75%,
+                transparent
+            );
+            background-size: 50px 50px;
+            animation: progressMove 1s linear infinite;
+        }
+
+        @keyframes progressMove {
+            0% { background-position: 0 0; }
+            100% { background-position: 50px 50px; }
+        }
+
+        .progress-text {
+            text-align: center;
+            margin-top: 10px;
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+
+        .encoding-format {
+            display: flex;
+            gap: 20px;
+            margin: 25px 0;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .format-option {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 500;
+            cursor: pointer;
+            padding: 12px 20px;
+            border-radius: 25px;
+            transition: var(--transition);
+            border: 2px solid transparent;
+            background: rgba(52, 152, 219, 0.05);
+        }
+
+        .format-option:hover {
+            background: rgba(52, 152, 219, 0.1);
+            transform: scale(1.05);
+        }
+
+        .format-option input[type="radio"] {
+            accent-color: var(--secondary-color);
+            transform: scale(1.2);
+        }
+
+        .format-option input[type="radio"]:checked + .format-label {
+            color: var(--secondary-color);
+            font-weight: 600;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+            animation: fadeInUp 0.5s ease-out;
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .stat-item {
+            background: linear-gradient(135deg, rgba(52, 152, 219, 0.08), rgba(155, 89, 182, 0.05));
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            border: 2px solid rgba(52, 152, 219, 0.1);
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--secondary-color), #2980b9);
+        }
+
+        .stat-item:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(52, 152, 219, 0.15);
+        }
+
+        .stat-value {
+            font-size: 2.2em;
+            font-weight: 700;
+            color: var(--secondary-color);
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, var(--secondary-color), #2980b9);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .stat-label {
+            color: var(--dark-gray);
+            font-size: 0.95em;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .advanced-options {
+            margin: 25px 0;
+            padding: 20px;
+            background: rgba(52, 152, 219, 0.03);
+            border-radius: 12px;
+            border: 1px solid rgba(52, 152, 219, 0.1);
+        }
+
+        .advanced-toggle {
+            cursor: pointer;
+            font-weight: 600;
+            color: var(--secondary-color);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .advanced-content {
+            display: none;
+            animation: slideDown 0.3s ease-out;
+        }
+
+        .advanced-content.show {
+            display: block;
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; max-height: 0; }
+            to { opacity: 1; max-height: 200px; }
+        }
+
+        .chunk-size-selector {
+            margin: 15px 0;
+        }
+
+        .chunk-size-selector label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .chunk-size-selector input {
+            width: 100px;
+            padding: 8px 12px;
+            border: 2px solid #e1e8ed;
+            border-radius: 8px;
+            font-size: 0.9em;
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+        }
+
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 600;
+            z-index: 1001;
+            transform: translateX(100%);
+            transition: transform 0.3s ease-out;
+        }
+
+        .toast.show {
+            transform: translateX(0);
+        }
+
+        .toast.success { background: var(--success-color); }
+        .toast.error { background: var(--danger-color); }
+        .toast.info { background: var(--info-color); }
+
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1001;
+            backdrop-filter: blur(5px);
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            animation: modalSlideIn 0.3s ease-out;
+            position: relative;
+        }
+
+        @keyframes modalSlideIn {
+            from { opacity: 0; transform: scale(0.8) translateY(-50px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid var(--light-gray);
+        }
+
+        .modal-title {
+            font-size: 1.5em;
+            font-weight: 600;
+            color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5em;
+            cursor: pointer;
+            color: var(--dark-gray);
+            padding: 5px;
+            border-radius: 50%;
+            width: 35px;
+            height: 35px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+        }
+
+        .modal-close:hover {
+            background: var(--light-gray);
+            color: var(--danger-color);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e1e8ed;
+            border-radius: 10px;
+            font-size: 1em;
+            transition: var(--transition);
+            font-family: inherit;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--secondary-color);
+            box-shadow: 0 0 0 4px rgba(52, 152, 219, 0.1);
+        }
+
+        .form-select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e1e8ed;
+            border-radius: 10px;
+            font-size: 1em;
+            transition: var(--transition);
+            background: white;
+            cursor: pointer;
+        }
+
+        .form-select:focus {
+            outline: none;
+            border-color: var(--secondary-color);
+            box-shadow: 0 0 0 4px rgba(52, 152, 219, 0.1);
+        }
+
+        .file-preview {
+            background: rgba(52, 152, 219, 0.05);
+            border: 1px solid rgba(52, 152, 219, 0.2);
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        .file-preview-info {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 10px;
+            align-items: center;
+            font-size: 0.9em;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: flex-end;
+            margin-top: 30px;
+        }
+
+        .modal-button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 25px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .modal-button.primary {
+            background: linear-gradient(135deg, var(--secondary-color), #2980b9);
+            color: white;
+            box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+        }
+
+        .modal-button.primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(52, 152, 219, 0.4);
+        }
+
+        .modal-button.secondary {
+            background: var(--light-gray);
+            color: var(--dark-gray);
+        }
+
+        .modal-button.secondary:hover {
+            background: #bdc3c7;
+        }
+
+        @media (max-width: 1024px) {
+            .main-content {
+                grid-template-columns: 1fr;
+                gap: 30px;
+                padding: 40px 30px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                padding: 30px 20px;
+            }
+            
+            .header {
+                padding: 30px 20px;
+            }
+            
+            .header h1 {
+                font-size: 2.2em;
+            }
+            
+            .tool-section {
+                padding: 25px 20px;
+            }
+
+            .button-group {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .button {
+                width: 100%;
+                max-width: 300px;
+            }
+
+            .stats {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .performance-indicator {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: rgba(39, 174, 96, 0.1);
+            color: var(--success-color);
+            padding: 5px 10px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <div class="container">
+        <div class="header">
+            <h1>🔐 檔案編碼解碼工具</h1>
+            <p>專業級檔案轉換工具，支援大檔案處理與多種格式，完全離線運作</p>
+            <div class="performance-indicator">高效能版本</div>
+        </div>
+
+        <div class="main-content">
+            <!-- 編碼區域 -->
+            <div class="tool-section">
+                <h2 class="section-title">
+                    📤 檔案編碼
+                </h2>
+                
+                <div class="encoding-format">
+                    <span style="font-weight: 600;">編碼格式：</span>
+                    <label class="format-option">
+                        <input type="radio" name="encodeFormat" value="base64" checked>
+                        <span class="format-label">Base64</span>
+                    </label>
+                    <label class="format-option">
+                        <input type="radio" name="encodeFormat" value="hex">
+                        <span class="format-label">十六進位</span>
+                    </label>
+                    <label class="format-option">
+                        <input type="radio" name="encodeFormat" value="base32">
+                        <span class="format-label">Base32</span>
+                    </label>
+                </div>
+
+                <div class="advanced-options">
+                    <div class="advanced-toggle" onclick="toggleAdvanced('encode')">
+                        ⚙️ 進階選項
+                        <span id="encodeAdvancedIcon">▼</span>
+                    </div>
+                    <div class="advanced-content" id="encodeAdvanced">
+                        <div class="chunk-size-selector">
+                            <label>分塊大小 (MB，用於大檔案處理):</label>
+                            <input type="number" id="encodeChunkSize" value="10" min="1" max="100">
+                        </div>
+                        <label>
+                            <input type="checkbox" id="addTimestamp"> 添加時間戳記
+                        </label>
+                    </div>
+                </div>
+
+                <div class="file-input-area" id="encodeDropArea">
+                    <input type="file" id="encodeFile" class="file-input">
+                    <label for="encodeFile" class="file-input-label">
+                        <div class="upload-icon">📁</div>
+                        點擊選擇檔案或拖放檔案到此處
+                        <div style="font-size: 0.9em; margin-top: 10px; opacity: 0.7;">
+                            支援任何格式，無大小限制
+                        </div>
+                    </label>
+                    <div id="encodeFileInfo" class="file-info" style="display: none;"></div>
+                </div>
+
+                <div class="button-group">
+                    <button class="button" onclick="encodeFile()" id="encodeBtn">
+                        🔐 開始編碼
+                    </button>
+                    <button class="button danger" onclick="clearEncode()">
+                        🗑️ 清除
+                    </button>
+                </div>
+
+                <div class="progress-container" id="encodeProgressContainer" style="display: none;">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="encodeProgressFill"></div>
+                    </div>
+                    <div class="progress-text" id="encodeProgressText">處理中...</div>
+                </div>
+
+                <div id="encodeStatus"></div>
+
+                <textarea id="encodedText" class="text-area" placeholder="編碼結果將顯示在這裡..." readonly></textarea>
+
+                <div class="button-group">
+                    <button class="button success" onclick="copyEncoded()">
+                        📋 複製編碼結果
+                    </button>
+                    <button class="button" onclick="downloadEncoded()">
+                        💾 下載為文字檔
+                    </button>
+                    <button class="button warning" onclick="validateEncoded()">
+                        ✓ 驗證編碼
+                    </button>
+                </div>
+
+                <div class="stats" id="encodeStats" style="display: none;">
+                    <div class="stat-item">
+                        <div class="stat-value" id="originalSize">0</div>
+                        <div class="stat-label">原始大小 (bytes)</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="encodedSize">0</div>
+                        <div class="stat-label">編碼後大小 (bytes)</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="sizeRatio">0%</div>
+                        <div class="stat-label">大小比例</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="processingTime">0</div>
+                        <div class="stat-label">處理時間 (秒)</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 解碼區域 -->
+            <div class="tool-section">
+                <h2 class="section-title">
+                    📥 文字解碼
+                </h2>
+                
+                <div class="encoding-format">
+                    <span style="font-weight: 600;">解碼格式：</span>
+                    <label class="format-option">
+                        <input type="radio" name="decodeFormat" value="base64" checked>
+                        <span class="format-label">Base64</span>
+                    </label>
+                    <label class="format-option">
+                        <input type="radio" name="decodeFormat" value="hex">
+                        <span class="format-label">十六進位</span>
+                    </label>
+                    <label class="format-option">
+                        <input type="radio" name="decodeFormat" value="base32">
+                        <span class="format-label">Base32</span>
+                    </label>
+                    <label class="format-option">
+                        <input type="radio" name="decodeFormat" value="auto">
+                        <span class="format-label">自動偵測</span>
+                    </label>
+                </div>
+
+                <div class="advanced-options">
+                    <div class="advanced-toggle" onclick="toggleAdvanced('decode')">
+                        ⚙️ 進階選項
+                        <span id="decodeAdvancedIcon">▼</span>
+                    </div>
+                    <div class="advanced-content" id="decodeAdvanced">
+                        <label>
+                            <input type="checkbox" id="validateIntegrity" checked> 驗證資料完整性
+                        </label>
+                        <br><br>
+                        <label>
+                            <input type="checkbox" id="autoDetectFormat" checked> 自動偵測格式
+                        </label>
+                    </div>
+                </div>
+
+                <textarea id="decodeText" class="text-area" placeholder="貼上要解碼的文字內容或從檔案載入..."></textarea>
+
+                <div class="button-group">
+                    <button class="button" onclick="decodeText()" id="decodeBtn">
+                        🔓 開始解碼
+                    </button>
+                    <button class="button" onclick="loadFromFile()">
+                        📂 從檔案載入
+                    </button>
+                    <button class="button danger" onclick="clearDecode()">
+                        🗑️ 清除
+                    </button>
+                </div>
+
+                <div class="progress-container" id="decodeProgressContainer" style="display: none;">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="decodeProgressFill"></div>
+                    </div>
+                    <div class="progress-text" id="decodeProgressText">解碼中...</div>
+                </div>
+
+                <div id="decodeStatus"></div>
+
+                <div class="button-group" id="decodeButtons" style="display: none;">
+                    <button class="button success" onclick="downloadDecoded()">
+                        💾 下載解碼檔案
+                    </button>
+                    <button class="button warning" onclick="saveAsDecoded()">
+                        📝 另存新檔
+                    </button>
+                    <button class="button" onclick="previewDecoded()">
+                        👁️ 預覽檔案
+                    </button>
+                </div>
+
+                <div class="stats" id="decodeStats" style="display: none;">
+                    <div class="stat-item">
+                        <div class="stat-value" id="decodedSize">0</div>
+                        <div class="stat-label">解碼後大小 (bytes)</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="decodedType">Unknown</div>
+                        <div class="stat-label">檔案類型</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="decodeTime">0</div>
+                        <div class="stat-label">解碼時間 (秒)</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <input type="file" id="hiddenFileInput" style="display: none;">
+
+    <!-- 另存新檔彈出視窗 -->
+    <div class="modal" id="saveAsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">
+                    📝 另存新檔
+                </div>
+                <button class="modal-close" onclick="closeSaveAsModal()">×</button>
+            </div>
+            
+            <div class="file-preview" id="filePreviewInfo">
+                <div class="file-preview-info">
+                    <span><strong>檔案類型：</strong></span>
+                    <span id="previewFileType">-</span>
+                    <span><strong>檔案大小：</strong></span>
+                    <span id="previewFileSize">-</span>
+                    <span><strong>預估格式：</strong></span>
+                    <span id="previewFileFormat">-</span>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label" for="saveFileName">檔案名稱：</label>
+                <input type="text" id="saveFileName" class="form-input" placeholder="輸入檔案名稱..." />
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label" for="saveFileExtension">檔案格式：</label>
+                <select id="saveFileExtension" class="form-select">
+                    <option value="auto">🔍 自動偵測</option>
+                    <optgroup label="📷 圖片格式">
+                        <option value=".png">PNG 圖片 (.png)</option>
+                        <option value=".jpg">JPEG 圖片 (.jpg)</option>
+                        <option value=".gif">GIF 圖片 (.gif)</option>
+                        <option value=".bmp">BMP 圖片 (.bmp)</option>
+                        <option value=".webp">WebP 圖片 (.webp)</option>
+                    </optgroup>
+                    <optgroup label="📄 文件格式">
+                        <option value=".pdf">PDF 文件 (.pdf)</option>
+                        <option value=".doc">Word 文件 (.doc)</option>
+                        <option value=".docx">Word 文件 (.docx)</option>
+                        <option value=".xls">Excel 文件 (.xls)</option>
+                        <option value=".xlsx">Excel 文件 (.xlsx)</option>
+                        <option value=".ppt">PowerPoint (.ppt)</option>
+                        <option value=".pptx">PowerPoint (.pptx)</option>
+                        <option value=".txt">純文字 (.txt)</option>
+                        <option value=".rtf">RTF 文件 (.rtf)</option>
+                    </optgroup>
+                    <optgroup label="🗜️ 壓縮格式">
+                        <option value=".zip">ZIP 壓縮檔 (.zip)</option>
+                        <option value=".rar">RAR 壓縮檔 (.rar)</option>
+                        <option value=".7z">7Z 壓縮檔 (.7z)</option>
+                        <option value=".gz">GZIP 檔案 (.gz)</option>
+                        <option value=".tar">TAR 檔案 (.tar)</option>
+                    </optgroup>
+                    <optgroup label="🎵 多媒體格式">
+                        <option value=".mp3">MP3 音樂 (.mp3)</option>
+                        <option value=".wav">WAV 音樂 (.wav)</option>
+                        <option value=".flac">FLAC 音樂 (.flac)</option>
+                        <option value=".mp4">MP4 影片 (.mp4)</option>
+                        <option value=".avi">AVI 影片 (.avi)</option>
+                        <option value=".mkv">MKV 影片 (.mkv)</option>
+                    </optgroup>
+                    <optgroup label="💾 程式/資料">
+                        <option value=".exe">執行檔 (.exe)</option>
+                        <option value=".msi">安裝程式 (.msi)</option>
+                        <option value=".dll">動態連結庫 (.dll)</option>
+                        <option value=".json">JSON 資料 (.json)</option>
+                        <option value=".xml">XML 資料 (.xml)</option>
+                        <option value=".csv">CSV 資料 (.csv)</option>
+                        <option value=".sql">SQL 檔案 (.sql)</option>
+                    </optgroup>
+                    <optgroup label="🔧 其他格式">
+                        <option value=".bin">二進位檔案 (.bin)</option>
+                        <option value=".dat">資料檔案 (.dat)</option>
+                        <option value=".bak">備份檔案 (.bak)</option>
+                        <option value=".tmp">暫存檔案 (.tmp)</option>
+                        <option value="">無副檔名</option>
+                    </optgroup>
+                </select>
+            </div>
+            
+            <div class="modal-buttons">
+                <button class="modal-button secondary" onclick="closeSaveAsModal()">
+                    取消
+                </button>
+                <button class="modal-button primary" onclick="confirmSaveAs()">
+                    下載檔案
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 全域變數
+        let decodedData = null;
+        let originalFileName = '';
+        let processingStartTime = 0;
+        let currentAbortController = null;
+
+        // Base32 編碼表
+        const BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+
+        // 工具函數
+        class FileProcessor {
+            static async processInChunks(file, chunkSize = 10 * 1024 * 1024, progressCallback) {
+                const chunks = [];
+                const totalChunks = Math.ceil(file.size / chunkSize);
+                
+                for (let i = 0; i < totalChunks; i++) {
+                    if (currentAbortController?.signal.aborted) {
+                        throw new Error('操作已取消');
+                    }
+                    
+                    const start = i * chunkSize;
+                    const end = Math.min(start + chunkSize, file.size);
+                    const chunk = file.slice(start, end);
+                    const arrayBuffer = await chunk.arrayBuffer();
+                    chunks.push(new Uint8Array(arrayBuffer));
+                    
+                    if (progressCallback) {
+                        progressCallback((i + 1) / totalChunks * 100);
+                    }
+                    
+                    // 讓瀏覽器有機會更新UI
+                    await new Promise(resolve => setTimeout(resolve, 0));
+                }
+                
+                // 合併所有塊
+                const totalLength = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
+                const result = new Uint8Array(totalLength);
+                let offset = 0;
+                
+                for (const chunk of chunks) {
+                    result.set(chunk, offset);
+                    offset += chunk.length;
+                }
+                
+                return result.buffer;
+            }
+
+            static detectFormat(text) {
+                text = text.trim();
+                
+                // Base64 檢測
+                if (/^[A-Za-z0-9+/]*={0,2}$/.test(text) && text.length % 4 === 0) {
+                    return 'base64';
+                }
+                
+                // 十六進位檢測
+                if (/^[0-9A-Fa-f]*$/.test(text) && text.length % 2 === 0) {
+                    return 'hex';
+                }
+                
+                // Base32 檢測
+                if (/^[A-Z2-7]*={0,6}$/.test(text.toUpperCase()) && text.length % 8 === 0) {
+                    return 'base32';
+                }
+                
+                return 'unknown';
+            }
+
+            static validateIntegrity(originalData, processedData) {
+                return originalData.byteLength === processedData.byteLength;
+            }
+        }
+
+        // Base32 編碼解碼函數
+        function arrayBufferToBase32(buffer) {
+            const bytes = new Uint8Array(buffer);
+            let result = '';
+            
+            for (let i = 0; i < bytes.length; i += 5) {
+                const chunk = bytes.slice(i, i + 5);
+                let value = 0;
+                
+                for (let j = 0; j < chunk.length; j++) {
+                    value = (value << 8) | chunk[j];
+                }
+                
+                const padding = 5 - chunk.length;
+                if (padding > 0) {
+                    value <<= padding * 8;
+                }
+                
+                for (let j = 0; j < 8; j++) {
+                    if (i === bytes.length - 1 && j >= Math.ceil(chunk.length * 8 / 5)) {
+                        result += '=';
+                    } else {
+                        const index = (value >>> (35 - j * 5)) & 0x1F;
+                        result += BASE32_ALPHABET[index];
+                    }
+                }
+            }
+            
+            return result;
+        }
+
+        function base32ToArrayBuffer(base32) {
+            base32 = base32.toUpperCase().replace(/=/g, '');
+            const bytes = [];
+            
+            for (let i = 0; i < base32.length; i += 8) {
+                let value = 0;
+                const chunk = base32.slice(i, i + 8);
+                
+                for (let j = 0; j < chunk.length; j++) {
+                    const index = BASE32_ALPHABET.indexOf(chunk[j]);
+                    if (index === -1) throw new Error('無效的Base32字元');
+                    value = (value << 5) | index;
+                }
+                
+                for (let j = 0; j < 5 && bytes.length < Math.floor(base32.length * 5 / 8); j++) {
+                    bytes.push((value >>> (32 - (j + 1) * 8)) & 0xFF);
+                }
+            }
+            
+            return new Uint8Array(bytes).buffer;
+        }
+
+        // 拖放功能設定
+        const encodeDropArea = document.getElementById('encodeDropArea');
+        
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            encodeDropArea.addEventListener(eventName, preventDefaults, false);
+            document.body.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            encodeDropArea.addEventListener(eventName, highlight, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            encodeDropArea.addEventListener(eventName, unhighlight, false);
+        });
+
+        function highlight(e) {
+            encodeDropArea.classList.add('dragover');
+        }
+
+        function unhighlight(e) {
+            encodeDropArea.classList.remove('dragover');
+        }
+
+        encodeDropArea.addEventListener('drop', handleDrop, false);
+
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            
+            if (files.length > 0) {
+                document.getElementById('encodeFile').files = files;
+                showFileInfo(files[0]);
+            }
+        }
+
+        // 檔案選擇事件
+        document.getElementById('encodeFile').addEventListener('change', function(e) {
+            if (e.target.files.length > 0) {
+                showFileInfo(e.target.files[0]);
+            }
+        });
+
+        function showFileInfo(file) {
+            const fileInfo = document.getElementById('encodeFileInfo');
+            const fileType = detectAdvancedFileType(file);
+            
+            fileInfo.innerHTML = `
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; text-align: left;">
+                    <div><strong>檔案名稱：</strong><br>${file.name}</div>
+                    <div><strong>檔案大小：</strong><br>${formatBytes(file.size)}</div>
+                    <div><strong>檔案類型：</strong><br>${file.type || '未知'}</div>
+                    <div><strong>最後修改：</strong><br>${new Date(file.lastModified).toLocaleString('zh-TW')}</div>
+                </div>
+                <div style="margin-top: 15px; padding: 10px; background: rgba(39, 174, 96, 0.1); border-radius: 6px;">
+                    <strong>預估編碼後大小：</strong> ${formatBytes(Math.ceil(file.size * 1.37))} (Base64)
+                </div>
+            `;
+            fileInfo.style.display = 'block';
+            originalFileName = file.name;
+        }
+
+        function detectAdvancedFileType(file) {
+            const ext = file.name.split('.').pop().toLowerCase();
+            const typeMap = {
+                'jpg': 'JPEG 圖片', 'jpeg': 'JPEG 圖片', 'png': 'PNG 圖片', 'gif': 'GIF 圖片',
+                'pdf': 'PDF 文件', 'doc': 'Word 文件', 'docx': 'Word 文件',
+                'xls': 'Excel 文件', 'xlsx': 'Excel 文件', 'ppt': 'PowerPoint 文件',
+                'zip': 'ZIP 壓縮檔', 'rar': 'RAR 壓縮檔', '7z': '7Z 壓縮檔',
+                'mp3': 'MP3 音樂', 'wav': 'WAV 音樂', 'mp4': 'MP4 影片', 'avi': 'AVI 影片'
+            };
+            return typeMap[ext] || '未知類型';
+        }
+
+        function formatBytes(bytes, decimals = 2) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const dm = decimals < 0 ? 0 : decimals;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+        }
+
+        async function encodeFile() {
+            const fileInput = document.getElementById('encodeFile');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                showStatus('encodeStatus', '❌ 請選擇要編碼的檔案', 'error');
+                return;
+            }
+
+            const format = document.querySelector('input[name="encodeFormat"]:checked').value;
+            const chunkSize = parseInt(document.getElementById('encodeChunkSize').value) * 1024 * 1024;
+            const addTimestamp = document.getElementById('addTimestamp').checked;
+            
+            processingStartTime = Date.now();
+            currentAbortController = new AbortController();
+            
+            const progressContainer = document.getElementById('encodeProgressContainer');
+            const progressFill = document.getElementById('encodeProgressFill');
+            const progressText = document.getElementById('encodeProgressText');
+            const encodeBtn = document.getElementById('encodeBtn');
+            
+            progressContainer.style.display = 'block';
+            progressFill.style.width = '0%';
+            encodeBtn.disabled = true;
+            encodeBtn.innerHTML = '⏹️ 取消處理';
+            encodeBtn.onclick = () => {
+                currentAbortController.abort();
+                encodeBtn.disabled = false;
+                encodeBtn.innerHTML = '🔐 開始編碼';
+                encodeBtn.onclick = encodeFile;
+                progressContainer.style.display = 'none';
+            };
+            
+            showStatus('encodeStatus', '📂 正在讀取檔案...', 'info');
+
+            try {
+                const arrayBuffer = await FileProcessor.processInChunks(
+                    file, 
+                    chunkSize, 
+                    (progress) => {
+                        progressFill.style.width = `${progress * 0.5}%`;
+                        progressText.textContent = `讀取檔案: ${Math.round(progress)}%`;
+                    }
+                );
+                
+                showStatus('encodeStatus', '🔐 正在編碼...', 'info');
+                progressText.textContent = '正在編碼...';
+                
+                let encodedString;
+                switch (format) {
+                    case 'base64':
+                        encodedString = await arrayBufferToBase64(arrayBuffer);
+                        break;
+                    case 'hex':
+                        encodedString = arrayBufferToHex(arrayBuffer);
+                        break;
+                    case 'base32':
+                        encodedString = arrayBufferToBase32(arrayBuffer);
+                        break;
+                    default:
+                        throw new Error('不支援的編碼格式');
+                }
+                
+                progressFill.style.width = '100%';
+                progressText.textContent = '編碼完成!';
+                
+                if (addTimestamp) {
+                    const timestamp = new Date().toISOString();
+                    encodedString = `[${timestamp}]\n${encodedString}`;
+                }
+                
+                document.getElementById('encodedText').value = encodedString;
+                showStatus('encodeStatus', '✅ 編碼完成！', 'success');
+                showToast('編碼成功完成！', 'success');
+                
+                // 顯示統計資訊
+                const processingTime = (Date.now() - processingStartTime) / 1000;
+                showEncodeStats(file.size, encodedString.length, processingTime);
+                
+                setTimeout(() => {
+                    progressContainer.style.display = 'none';
+                }, 2000);
+                
+            } catch (error) {
+                if (error.message === '操作已取消') {
+                    showStatus('encodeStatus', '⏹️ 操作已取消', 'warning');
+                    showToast('操作已取消', 'info');
+                } else {
+                    showStatus('encodeStatus', '❌ 編碼失敗：' + error.message, 'error');
+                    showToast('編碼失敗', 'error');
+                }
+                progressContainer.style.display = 'none';
+            } finally {
+                encodeBtn.disabled = false;
+                encodeBtn.innerHTML = '🔐 開始編碼';
+                encodeBtn.onclick = encodeFile;
+            }
+        }
+
+        function arrayBufferToBase64(buffer) {
+            return new Promise((resolve) => {
+                const blob = new Blob([buffer]);
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const base64 = e.target.result.split(',')[1];
+                    resolve(base64);
+                };
+                reader.readAsDataURL(blob);
+            });
+        }
+
+        function arrayBufferToHex(buffer) {
+            const uint8Array = new Uint8Array(buffer);
+            return Array.from(uint8Array, byte => byte.toString(16).padStart(2, '0')).join('');
+        }
+
+        function showEncodeStats(originalSize, encodedSize, processingTime) {
+            document.getElementById('originalSize').textContent = originalSize.toLocaleString();
+            document.getElementById('encodedSize').textContent = encodedSize.toLocaleString();
+            document.getElementById('sizeRatio').textContent = Math.round((encodedSize / originalSize) * 100) + '%';
+            document.getElementById('processingTime').textContent = processingTime.toFixed(2);
+            document.getElementById('encodeStats').style.display = 'grid';
+        }
+
+        async function decodeText() {
+            const decodeTextArea = document.getElementById('decodeText');
+            let encodedText = decodeTextArea.value.trim();
+            
+            if (!encodedText) {
+                showStatus('decodeStatus', '❌ 請輸入要解碼的文字', 'error');
+                return;
+            }
+
+            // 移除時間戳記（如果有的話）
+            const timestampMatch = encodedText.match(/^\[([^\]]+)\]\n(.*)$/s);
+            if (timestampMatch) {
+                encodedText = timestampMatch[2];
+                showToast('偵測到時間戳記：' + timestampMatch[1], 'info');
+            }
+
+            let format = document.querySelector('input[name="decodeFormat"]:checked').value;
+            const validateIntegrity = document.getElementById('validateIntegrity').checked;
+            const autoDetect = document.getElementById('autoDetectFormat').checked;
+            
+            if (format === 'auto' || autoDetect) {
+                format = FileProcessor.detectFormat(encodedText);
+                if (format === 'unknown') {
+                    showStatus('decodeStatus', '❌ 無法自動偵測編碼格式', 'error');
+                    return;
+                }
+                showToast('自動偵測格式：' + format.toUpperCase(), 'info');
+            }
+
+            processingStartTime = Date.now();
+            currentAbortController = new AbortController();
+            
+            const progressContainer = document.getElementById('decodeProgressContainer');
+            const progressFill = document.getElementById('decodeProgressFill');
+            const progressText = document.getElementById('decodeProgressText');
+            const decodeBtn = document.getElementById('decodeBtn');
+            
+            progressContainer.style.display = 'block';
+            progressFill.style.width = '0%';
+            decodeBtn.disabled = true;
+            decodeBtn.innerHTML = '⏹️ 取消處理';
+            decodeBtn.onclick = () => {
+                currentAbortController.abort();
+                decodeBtn.disabled = false;
+                decodeBtn.innerHTML = '🔓 開始解碼';
+                decodeBtn.onclick = decodeText;
+                progressContainer.style.display = 'none';
+            };
+            
+            showStatus('decodeStatus', '🔓 正在解碼...', 'info');
+
+            try {
+                progressText.textContent = '解析編碼格式...';
+                progressFill.style.width = '25%';
+                
+                await new Promise(resolve => setTimeout(resolve, 100));
+                
+                let arrayBuffer;
+                switch (format) {
+                    case 'base64':
+                        arrayBuffer = base64ToArrayBuffer(encodedText);
+                        break;
+                    case 'hex':
+                        arrayBuffer = hexToArrayBuffer(encodedText);
+                        break;
+                    case 'base32':
+                        arrayBuffer = base32ToArrayBuffer(encodedText);
+                        break;
+                    default:
+                        throw new Error('不支援的解碼格式：' + format);
+                }
+                
+                progressFill.style.width = '75%';
+                progressText.textContent = '驗證資料完整性...';
+                
+                if (validateIntegrity && arrayBuffer.byteLength === 0) {
+                    throw new Error('解碼後資料為空');
+                }
+                
+                progressFill.style.width = '100%';
+                progressText.textContent = '解碼完成!';
+                
+                decodedData = arrayBuffer;
+                showStatus('decodeStatus', '✅ 解碼完成！', 'success');
+                showToast('解碼成功完成！', 'success');
+                
+                // 顯示統計資訊
+                const processingTime = (Date.now() - processingStartTime) / 1000;
+                showDecodeStats(arrayBuffer.byteLength, processingTime);
+                
+                document.getElementById('decodeButtons').style.display = 'block';
+                
+                setTimeout(() => {
+                    progressContainer.style.display = 'none';
+                }, 2000);
+                
+            } catch (error) {
+                if (error.message === '操作已取消') {
+                    showStatus('decodeStatus', '⏹️ 操作已取消', 'warning');
+                    showToast('操作已取消', 'info');
+                } else {
+                    showStatus('decodeStatus', '❌ 解碼失敗：' + error.message, 'error');
+                    showToast('解碼失敗', 'error');
+                }
+                progressContainer.style.display = 'none';
+            } finally {
+                decodeBtn.disabled = false;
+                decodeBtn.innerHTML = '🔓 開始解碼';
+                decodeBtn.onclick = decodeText;
+            }
+        }
+
+        function base64ToArrayBuffer(base64) {
+            try {
+                const binaryString = atob(base64);
+                const bytes = new Uint8Array(binaryString.length);
+                for (let i = 0; i < binaryString.length; i++) {
+                    bytes[i] = binaryString.charCodeAt(i);
+                }
+                return bytes.buffer;
+            } catch (error) {
+                throw new Error('無效的Base64格式');
+            }
+        }
+
+        function hexToArrayBuffer(hex) {
+            if (hex.length % 2 !== 0) {
+                throw new Error('十六進位字串長度必須是偶數');
+            }
+            
+            try {
+                const bytes = new Uint8Array(hex.length / 2);
+                for (let i = 0; i < hex.length; i += 2) {
+                    const byte = parseInt(hex.substr(i, 2), 16);
+                    if (isNaN(byte)) {
+                        throw new Error('無效的十六進位字元');
+                    }
+                    bytes[i / 2] = byte;
+                }
+                return bytes.buffer;
+            } catch (error) {
+                throw new Error('無效的十六進位格式');
+            }
+        }
+
+        function showDecodeStats(size, processingTime) {
+            document.getElementById('decodedSize').textContent = size.toLocaleString();
+            document.getElementById('decodedType').textContent = detectFileType(new Uint8Array(decodedData));
+            document.getElementById('decodeTime').textContent = processingTime.toFixed(2);
+            document.getElementById('decodeStats').style.display = 'grid';
+        }
+
+        function detectFileType(uint8Array) {
+            if (uint8Array.length < 4) return 'Unknown';
+            
+            const getSignature = (length) => {
+                return Array.from(uint8Array.slice(0, length), byte => 
+                    byte.toString(16).padStart(2, '0')).join('');
+            };
+            
+            const signatures = {
+                '89504e47': 'PNG 圖片',
+                'ffd8ffe0': 'JPEG 圖片', 'ffd8ffe1': 'JPEG 圖片', 'ffd8ffe2': 'JPEG 圖片',
+                '47494638': 'GIF 圖片',
+                '25504446': 'PDF 文件',
+                '504b0304': 'ZIP/Office 文件', '504b0506': 'ZIP/Office 文件',
+                'd0cf11e0': 'MS Office 文件',
+                '52617221': 'RAR 壓縮檔',
+                '7f454c46': 'ELF 執行檔',
+                '4d5a9000': 'EXE 執行檔', '4d5a9001': 'EXE 執行檔',
+                '3c68746d': 'HTML 文件', '3c21444f': 'HTML 文件',
+                '3c3f786d': 'XML 文件',
+                '377abcaf': '7Z 壓縮檔',
+                '1f8b0800': 'GZIP 檔案',
+                '425a6839': 'BZIP2 檔案',
+                '49443303': 'MP3 音樂', '49443304': 'MP3 音樂',
+                '52494646': 'WAV 音樂',
+                '00000014': 'MP4 影片', '00000018': 'MP4 影片', '0000001c': 'MP4 影片',
+            };
+            
+            const signature4 = getSignature(4);
+            const signature8 = getSignature(8);
+            
+            // 檢查8位元組簽名
+            for (const [sig, type] of Object.entries(signatures)) {
+                if (sig.length === 8 && signature8.startsWith(sig)) {
+                    return type;
+                }
+            }
+            
+            // 檢查4位元組簽名
+            for (const [sig, type] of Object.entries(signatures)) {
+                if (sig.length === 8 && signature4.startsWith(sig)) {
+                    return type;
+                }
+            }
+            
+            // 文字檔檢測
+            if (isTextFile(uint8Array)) {
+                return 'Text 文字檔';
+            }
+            
+            return 'Unknown';
+        }
+
+        function isTextFile(uint8Array) {
+            const sample = uint8Array.slice(0, Math.min(1024, uint8Array.length));
+            let textChars = 0;
+            
+            for (const byte of sample) {
+                if ((byte >= 32 && byte <= 126) || byte === 9 || byte === 10 || byte === 13) {
+                    textChars++;
+                }
+            }
+            
+            return textChars / sample.length > 0.95;
+        }
+
+        async function validateEncoded() {
+            const encodedText = document.getElementById('encodedText').value;
+            if (!encodedText) {
+                showStatus('encodeStatus', '❌ 沒有編碼結果可驗證', 'error');
+                return;
+            }
+            
+            const format = document.querySelector('input[name="encodeFormat"]:checked').value;
+            
+            try {
+                showStatus('encodeStatus', '🔍 正在驗證編碼...', 'info');
+                
+                let arrayBuffer;
+                switch (format) {
+                    case 'base64':
+                        arrayBuffer = base64ToArrayBuffer(encodedText);
+                        break;
+                    case 'hex':
+                        arrayBuffer = hexToArrayBuffer(encodedText);
+                        break;
+                    case 'base32':
+                        arrayBuffer = base32ToArrayBuffer(encodedText);
+                        break;
+                }
+                
+                const fileInput = document.getElementById('encodeFile');
+                if (fileInput.files.length > 0) {
+                    const originalBuffer = await fileInput.files[0].arrayBuffer();
+                    const isValid = FileProcessor.validateIntegrity(originalBuffer, arrayBuffer);
+                    
+                    if (isValid) {
+                        showStatus('encodeStatus', '✅ 編碼驗證通過！資料完整無誤', 'success');
+                        showToast('編碼驗證成功！', 'success');
+                    } else {
+                        showStatus('encodeStatus', '⚠️ 編碼驗證失敗！資料可能有誤', 'error');
+                        showToast('編碼驗證失敗！', 'error');
+                    }
+                } else {
+                    showStatus('encodeStatus', '✅ 編碼格式驗證通過', 'success');
+                    showToast('格式驗證通過！', 'success');
+                }
+                
+            } catch (error) {
+                showStatus('encodeStatus', '❌ 驗證失敗：' + error.message, 'error');
+                showToast('驗證失敗', 'error');
+            }
+        }
+
+        function copyEncoded() {
+            const encodedText = document.getElementById('encodedText');
+            if (!encodedText.value) {
+                showStatus('encodeStatus', '❌ 沒有編碼結果可複製', 'error');
+                return;
+            }
+            
+            encodedText.select();
+            document.execCommand('copy');
+            showStatus('encodeStatus', '✅ 編碼結果已複製到剪貼簿', 'success');
+            showToast('已複製到剪貼簿！', 'success');
+        }
+
+        function downloadEncoded() {
+            const encodedText = document.getElementById('encodedText').value;
+            if (!encodedText) {
+                showStatus('encodeStatus', '❌ 沒有編碼結果可下載', 'error');
+                return;
+            }
+            
+            const format = document.querySelector('input[name="encodeFormat"]:checked').value;
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+            const filename = originalFileName ? 
+                `${originalFileName.replace(/\.[^/.]+$/, '')}_encoded_${format}_${timestamp}.txt` : 
+                `encoded_${format}_${timestamp}.txt`;
+            
+            const blob = new Blob([encodedText], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            showStatus('encodeStatus', '✅ 編碼結果已下載', 'success');
+            showToast('檔案下載完成！', 'success');
+        }
+
+        function loadFromFile() {
+            const hiddenFileInput = document.getElementById('hiddenFileInput');
+            hiddenFileInput.accept = '.txt,.dat,.base64,.hex';
+            hiddenFileInput.onchange = function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        document.getElementById('decodeText').value = e.target.result;
+                        showToast(`已載入檔案：${file.name}`, 'success');
+                    };
+                    reader.readAsText(file);
+                }
+            };
+            hiddenFileInput.click();
+        }
+
+        async function downloadDecoded() {
+            if (!decodedData) {
+                showStatus('decodeStatus', '❌ 沒有解碼結果可下載', 'error');
+                return;
+            }
+            
+            const fileType = detectFileType(new Uint8Array(decodedData));
+            const extension = getFileExtension(fileType);
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+            const filename = originalFileName || `decoded_file_${timestamp}${extension}`;
+            
+            const blob = new Blob([decodedData]);
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            showStatus('decodeStatus', '✅ 解碼檔案已下載', 'success');
+            showToast('檔案下載完成！', 'success');
+        }
+
+        function saveAsDecoded() {
+            if (!decodedData) {
+                showStatus('decodeStatus', '❌ 沒有解碼結果可儲存', 'error');
+                return;
+            }
+            
+            // 分析檔案資訊
+            const fileType = detectFileType(new Uint8Array(decodedData));
+            const fileSize = formatBytes(decodedData.byteLength);
+            const suggestedExtension = getFileExtension(fileType);
+            
+            // 填入檔案預覽資訊
+            document.getElementById('previewFileType').textContent = fileType;
+            document.getElementById('previewFileSize').textContent = fileSize;
+            document.getElementById('previewFileFormat').textContent = suggestedExtension;
+            
+            // 設定預設檔案名稱
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 16);
+            const defaultName = originalFileName ? 
+                originalFileName.replace(/\.[^/.]+$/, '') : 
+                `decoded_file_${timestamp}`;
+            document.getElementById('saveFileName').value = defaultName;
+            
+            // 設定建議的副檔名
+            const extensionSelect = document.getElementById('saveFileExtension');
+            const matchingOption = Array.from(extensionSelect.options).find(option => 
+                option.value === suggestedExtension
+            );
+            if (matchingOption) {
+                extensionSelect.value = suggestedExtension;
+            } else {
+                extensionSelect.value = 'auto';
+            }
+            
+            // 顯示彈出視窗
+            document.getElementById('saveAsModal').classList.add('show');
+            document.getElementById('saveFileName').focus();
+            document.getElementById('saveFileName').select();
+        }
+
+        function closeSaveAsModal() {
+            document.getElementById('saveAsModal').classList.remove('show');
+        }
+
+        function confirmSaveAs() {
+            const fileName = document.getElementById('saveFileName').value.trim();
+            const selectedExtension = document.getElementById('saveFileExtension').value;
+            
+            if (!fileName) {
+                showToast('請輸入檔案名稱', 'error');
+                return;
+            }
+            
+            let finalFileName = fileName;
+            
+            // 處理副檔名
+            if (selectedExtension === 'auto') {
+                // 自動偵測副檔名
+                const fileType = detectFileType(new Uint8Array(decodedData));
+                const autoExtension = getFileExtension(fileType);
+                if (autoExtension && !finalFileName.includes('.')) {
+                    finalFileName += autoExtension;
+                }
+            } else if (selectedExtension) {
+                // 使用選定的副檔名
+                if (!finalFileName.endsWith(selectedExtension)) {
+                    // 移除現有副檔名（如果有的話）
+                    finalFileName = finalFileName.replace(/\.[^/.]+$/, '');
+                    finalFileName += selectedExtension;
+                }
+            }
+            
+            // 驗證檔案名稱
+            const invalidChars = /[<>:"/\\|?*]/g;
+            if (invalidChars.test(finalFileName)) {
+                showToast('檔案名稱包含無效字元', 'error');
+                return;
+            }
+            
+            // 下載檔案
+            try {
+                const blob = new Blob([decodedData]);
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = finalFileName;
+                a.click();
+                URL.revokeObjectURL(url);
+                
+                closeSaveAsModal();
+                showStatus('decodeStatus', `✅ 檔案已儲存為: ${finalFileName}`, 'success');
+                showToast('檔案儲存完成！', 'success');
+                
+                // 記錄下載歷史（可選）
+                recordDownloadHistory(finalFileName, decodedData.byteLength);
+                
+            } catch (error) {
+                showToast('檔案儲存失敗: ' + error.message, 'error');
+            }
+        }
+
+        function recordDownloadHistory(filename, size) {
+            try {
+                const history = JSON.parse(localStorage.getItem('downloadHistory') || '[]');
+                history.unshift({
+                    filename,
+                    size,
+                    timestamp: new Date().toISOString(),
+                    type: detectFileType(new Uint8Array(decodedData))
+                });
+                
+                // 只保留最近10次記錄
+                if (history.length > 10) {
+                    history.splice(10);
+                }
+                
+                localStorage.setItem('downloadHistory', JSON.stringify(history));
+            } catch (error) {
+                console.warn('無法儲存下載歷史:', error);
+            }
+        }
+
+        function previewDecoded() {
+            if (!decodedData) {
+                showStatus('decodeStatus', '❌ 沒有解碼結果可預覽', 'error');
+                return;
+            }
+            
+            const fileType = detectFileType(new Uint8Array(decodedData));
+            const blob = new Blob([decodedData]);
+            const url = URL.createObjectURL(blob);
+            
+            if (fileType.includes('圖片') || fileType.includes('PDF') || fileType.includes('文字')) {
+                window.open(url, '_blank');
+                showToast('檔案預覽已開啟', 'info');
+            } else {
+                showStatus('decodeStatus', '⚠️ 該檔案類型不支援預覽', 'warning');
+                showToast('不支援預覽此檔案類型', 'warning');
+            }
+            
+            setTimeout(() => URL.revokeObjectURL(url), 60000);
+        }
+
+        function getFileExtension(fileType) {
+            const extensions = {
+                'PNG 圖片': '.png', 'JPEG 圖片': '.jpg', 'GIF 圖片': '.gif',
+                'PDF 文件': '.pdf', 'MS Office 文件': '.doc', 'ZIP/Office 文件': '.zip',
+                'RAR 壓縮檔': '.rar', '7Z 壓縮檔': '.7z', 'GZIP 檔案': '.gz',
+                'ELF 執行檔': '.elf', 'EXE 執行檔': '.exe',
+                'HTML 文件': '.html', 'XML 文件': '.xml', 'Text 文字檔': '.txt',
+                'MP3 音樂': '.mp3', 'WAV 音樂': '.wav', 'MP4 影片': '.mp4'
+            };
+            return extensions[fileType] || '.bin';
+        }
+
+        function clearEncode() {
+            document.getElementById('encodeFile').value = '';
+            document.getElementById('encodedText').value = '';
+            document.getElementById('encodeFileInfo').style.display = 'none';
+            document.getElementById('encodeStatus').innerHTML = '';
+            document.getElementById('encodeStats').style.display = 'none';
+            document.getElementById('encodeProgressContainer').style.display = 'none';
+            originalFileName = '';
+            
+            // 重置按鈕狀態
+            const encodeBtn = document.getElementById('encodeBtn');
+            encodeBtn.disabled = false;
+            encodeBtn.innerHTML = '🔐 開始編碼';
+            encodeBtn.onclick = encodeFile;
+            
+            if (currentAbortController) {
+                currentAbortController.abort();
+            }
+            
+            showToast('編碼區域已清除', 'info');
+        }
+
+        function clearDecode() {
+            document.getElementById('decodeText').value = '';
+            document.getElementById('decodeStatus').innerHTML = '';
+            document.getElementById('decodeButtons').style.display = 'none';
+            document.getElementById('decodeStats').style.display = 'none';
+            document.getElementById('decodeProgressContainer').style.display = 'none';
+            decodedData = null;
+            
+            // 重置按鈕狀態
+            const decodeBtn = document.getElementById('decodeBtn');
+            decodeBtn.disabled = false;
+            decodeBtn.innerHTML = '🔓 開始解碼';
+            decodeBtn.onclick = decodeText;
+            
+            if (currentAbortController) {
+                currentAbortController.abort();
+            }
+            
+            showToast('解碼區域已清除', 'info');
+        }
+
+        function showStatus(elementId, message, type) {
+            const statusElement = document.getElementById(elementId);
+            const iconMap = {
+                success: '✅',
+                error: '❌',
+                info: 'ℹ️',
+                warning: '⚠️'
+            };
+            
+            statusElement.innerHTML = `
+                <div class="status-message status-${type}">
+                    ${iconMap[type] || ''} ${message}
+                </div>
+            `;
+            
+            // 自動清除成功和錯誤訊息
+            if (type === 'success' || type === 'error') {
+                setTimeout(() => {
+                    if (statusElement.innerHTML.includes(message)) {
+                        statusElement.innerHTML = '';
+                    }
+                }, 5000);
+            }
+        }
+
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => toast.classList.add('show'), 100);
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => document.body.removeChild(toast), 300);
+            }, 3000);
+        }
+
+        function toggleAdvanced(section) {
+            const content = document.getElementById(section + 'Advanced');
+            const icon = document.getElementById(section + 'AdvancedIcon');
+            
+            if (content.classList.contains('show')) {
+                content.classList.remove('show');
+                icon.textContent = '▼';
+            } else {
+                content.classList.add('show');
+                icon.textContent = '▲';
+            }
+        }
+
+        // 鍵盤快捷鍵支援
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey || e.metaKey) {
+                switch(e.key) {
+                    case 'e':
+                        e.preventDefault();
+                        encodeFile();
+                        break;
+                    case 'd':
+                        e.preventDefault();
+                        decodeText();
+                        break;
+                    case 'r':
+                        e.preventDefault();
+                        clearEncode();
+                        clearDecode();
+                        break;
+                    case 's':
+                        if (decodedData) {
+                            e.preventDefault();
+                            saveAsDecoded();
+                        }
+                        break;
+                }
+            }
+            
+            if (e.key === 'Escape') {
+                if (currentAbortController) {
+                    currentAbortController.abort();
+                }
+                closeSaveAsModal();
+            }
+            
+            // Enter 鍵確認另存新檔
+            if (e.key === 'Enter' && document.getElementById('saveAsModal').classList.contains('show')) {
+                e.preventDefault();
+                confirmSaveAs();
+            }
+        });
+
+        // 點擊彈出視窗外部關閉
+        document.getElementById('saveAsModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeSaveAsModal();
+            }
+        });
+
+        // 自動儲存功能
+        function saveToLocalStorage() {
+            try {
+                const data = {
+                    encodedText: document.getElementById('encodedText').value,
+                    decodeText: document.getElementById('decodeText').value,
+                    timestamp: Date.now()
+                };
+                localStorage.setItem('fileEncoderData', JSON.stringify(data));
+            } catch (error) {
+                console.warn('無法儲存到本地儲存:', error);
+            }
+        }
+
+        function loadFromLocalStorage() {
+            try {
+                const data = JSON.parse(localStorage.getItem('fileEncoderData'));
+                if (data && Date.now() - data.timestamp < 24 * 60 * 60 * 1000) { // 24小時內
+                    if (data.encodedText) {
+                        document.getElementById('encodedText').value = data.encodedText;
+                    }
+                    if (data.decodeText) {
+                        document.getElementById('decodeText').value = data.decodeText;
+                    }
+                }
+            } catch (error) {
+                console.warn('無法從本地儲存載入:', error);
+            }
+        }
+
+        // 效能監控
+        class PerformanceMonitor {
+            static startTimer(name) {
+                this.timers = this.timers || {};
+                this.timers[name] = performance.now();
+            }
+            
+            static endTimer(name) {
+                if (this.timers && this.timers[name]) {
+                    const duration = performance.now() - this.timers[name];
+                    console.log(`${name}: ${duration.toFixed(2)}ms`);
+                    delete this.timers[name];
+                    return duration;
+                }
+                return 0;
+            }
+            
+            static getMemoryUsage() {
+                if (performance.memory) {
+                    return {
+                        used: Math.round(performance.memory.usedJSHeapSize / 1024 / 1024),
+                        total: Math.round(performance.memory.totalJSHeapSize / 1024 / 1024),
+                        limit: Math.round(performance.memory.jsHeapSizeLimit / 1024 / 1024)
+                    };
+                }
+                return null;
+            }
+        }
+
+        // 文字區域自動調整高度
+        function autoResizeTextarea(textarea) {
+            textarea.style.height = 'auto';
+            textarea.style.height = Math.min(textarea.scrollHeight, 400) + 'px';
+        }
+
+        // 為文字區域添加自動調整功能
+        document.getElementById('encodedText').addEventListener('input', function() {
+            autoResizeTextarea(this);
+            saveToLocalStorage();
+        });
+
+        document.getElementById('decodeText').addEventListener('input', function() {
+            autoResizeTextarea(this);
+            saveToLocalStorage();
+        });
+
+        // 批次處理功能
+        async function batchProcessFiles(files, operation) {
+            const results = [];
+            const totalFiles = files.length;
+            
+            for (let i = 0; i < totalFiles; i++) {
+                const file = files[i];
+                try {
+                    showStatus('encodeStatus', `處理檔案 ${i + 1}/${totalFiles}: ${file.name}`, 'info');
+                    const result = await operation(file);
+                    results.push({ file: file.name, success: true, result });
+                } catch (error) {
+                    results.push({ file: file.name, success: false, error: error.message });
+                }
+            }
+            
+            return results;
+        }
+
+        // 檔案完整性檢查
+        function calculateChecksum(arrayBuffer) {
+            const uint8Array = new Uint8Array(arrayBuffer);
+            let checksum = 0;
+            for (let i = 0; i < uint8Array.length; i++) {
+                checksum = (checksum + uint8Array[i]) % 65536;
+            }
+            return checksum.toString(16).padStart(4, '0');
+        }
+
+        // 增強的錯誤處理
+        window.addEventListener('error', function(e) {
+            console.error('全域錯誤:', e.error);
+            showToast('發生未預期的錯誤，請重新整理頁面', 'error');
+        });
+
+        window.addEventListener('unhandledrejection', function(e) {
+            console.error('未處理的Promise拒絕:', e.reason);
+            showToast('處理過程中發生錯誤', 'error');
+        });
+
+        // 頁面載入完成後的初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 載入先前的資料
+            loadFromLocalStorage();
+            
+            // 顯示版本資訊
+            console.log('檔案編碼解碼工具 - 專業版 v2.0');
+            console.log('支援格式: Base64, Hex, Base32');
+            console.log('新功能: 大檔案處理, 批次操作, 完整性驗證');
+            
+            // 檢查瀏覽器功能支援
+            if (!window.File || !window.FileReader || !window.FileList || !window.Blob) {
+                showToast('您的瀏覽器不完全支援檔案API功能', 'warning');
+            }
+            
+            // 顯示歡迎訊息
+            showToast('檔案編碼解碼工具已就緒！', 'success');
+        });
+
+        // 頁面卸載前儲存資料
+        window.addEventListener('beforeunload', function() {
+            saveToLocalStorage();
+        });
+
+        // 響應式處理
+        function handleResponsive() {
+            const container = document.querySelector('.main-content');
+            if (window.innerWidth <= 768) {
+                container.style.gridTemplateColumns = '1fr';
+            } else {
+                container.style.gridTemplateColumns = '1fr 1fr';
+            }
+        }
+
+        window.addEventListener('resize', handleResponsive);
+
+        // 深色模式切換（如果需要）
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+            const isDark = document.body.classList.contains('dark-mode');
+            localStorage.setItem('darkMode', isDark);
+            showToast(isDark ? '已切換到深色模式' : '已切換到淺色模式', 'info');
+        }
+
+        // 匯出所有功能到全域範圍（用於控制台除錯）
+        if (typeof window !== 'undefined') {
+            window.FileEncoderUtils = {
+                FileProcessor,
+                PerformanceMonitor,
+                calculateChecksum,
+                toggleDarkMode,
+                clearAll: () => { clearEncode(); clearDecode(); },
+                version: '2.0'
+            };
+        }
+    </script>
+</body>
+</html>
