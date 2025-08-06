@@ -1120,40 +1120,28 @@
 
         // 工具函數
         class FileProcessor {
-            static async processInChunks(file, chunkSize = 10 * 1024 * 1024, progressCallback) {
-                const chunks = [];
+            static async *processInChunks(file, chunkSize = 10 * 1024 * 1024, progressCallback) {
                 const totalChunks = Math.ceil(file.size / chunkSize);
-                
+
                 for (let i = 0; i < totalChunks; i++) {
                     if (currentAbortController?.signal.aborted) {
                         throw new Error('操作已取消');
                     }
-                    
+
                     const start = i * chunkSize;
                     const end = Math.min(start + chunkSize, file.size);
                     const chunk = file.slice(start, end);
                     const arrayBuffer = await chunk.arrayBuffer();
-                    chunks.push(new Uint8Array(arrayBuffer));
-                    
+
                     if (progressCallback) {
                         progressCallback((i + 1) / totalChunks * 100);
                     }
-                    
+
                     // 讓瀏覽器有機會更新UI
                     await new Promise(resolve => setTimeout(resolve, 0));
+
+                    yield new Uint8Array(arrayBuffer);
                 }
-                
-                // 合併所有塊
-                const totalLength = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
-                const result = new Uint8Array(totalLength);
-                let offset = 0;
-                
-                for (const chunk of chunks) {
-                    result.set(chunk, offset);
-                    offset += chunk.length;
-                }
-                
-                return result.buffer;
             }
 
             static detectFormat(text) {
@@ -1413,36 +1401,126 @@
                 progressContainer.style.display = 'none';
             };
             
-            showStatus('encodeStatus', '📂 正在讀取檔案...', 'info');
+            const uint8ToBinaryString = (uint8) => {
+                let binary = '';
+                const CHUNK_SIZE = 0x8000;
+                for (let i = 0; i < uint8.length; i += CHUNK_SIZE) {
+                    binary += String.fromCharCode(...uint8.subarray(i, i + CHUNK_SIZE));
+                }
+                return binary;
+            };
+
+            const encodeBase64Chunk = (chunk, carry) => {
+                let buffer;
+                if (carry.length) {
+                    buffer = new Uint8Array(carry.length + chunk.length);
+                    buffer.set(carry);
+                    buffer.set(chunk, carry.length);
+                } else {
+                    buffer = chunk;
+                }
+                const remain = buffer.length % 3;
+                const toEncode = buffer.subarray(0, buffer.length - remain);
+                const newCarry = buffer.slice(buffer.length - remain);
+                const output = btoa(uint8ToBinaryString(toEncode));
+                return { output, carry: newCarry };
+            };
+
+            const finalizeBase64 = (carry) => {
+                if (!carry.length) return '';
+                return btoa(uint8ToBinaryString(carry));
+            };
+
+            const encodeBase32Chunk = (chunk, carry) => {
+                let buffer;
+                if (carry.length) {
+                    buffer = new Uint8Array(carry.length + chunk.length);
+                    buffer.set(carry);
+                    buffer.set(chunk, carry.length);
+                } else {
+                    buffer = chunk;
+                }
+                let result = '';
+                let i = 0;
+                while (i + 5 <= buffer.length) {
+                    const part = buffer.subarray(i, i + 5);
+                    let value = 0;
+                    for (let j = 0; j < 5; j++) {
+                        value = (value << 8) | part[j];
+                    }
+                    for (let j = 0; j < 8; j++) {
+                        const index = (value >>> (35 - j * 5)) & 0x1F;
+                        result += BASE32_ALPHABET[index];
+                    }
+                    i += 5;
+                }
+                const newCarry = buffer.slice(i);
+                return { output: result, carry: newCarry };
+            };
+
+            const finalizeBase32 = (carry) => {
+                if (!carry.length) return '';
+                let value = 0;
+                for (let i = 0; i < carry.length; i++) {
+                    value = (value << 8) | carry[i];
+                }
+                const padding = 5 - carry.length;
+                value <<= padding * 8;
+                let result = '';
+                for (let j = 0; j < 8; j++) {
+                    if (j >= Math.ceil(carry.length * 8 / 5)) {
+                        result += '=';
+                    } else {
+                        const index = (value >>> (35 - j * 5)) & 0x1F;
+                        result += BASE32_ALPHABET[index];
+                    }
+                }
+                return result;
+            };
+
+            showStatus('encodeStatus', '🔐 正在編碼...', 'info');
+            progressText.textContent = '正在編碼...';
 
             try {
-                const arrayBuffer = await FileProcessor.processInChunks(
-                    file, 
-                    chunkSize, 
+                let encodedString = '';
+                let base64Carry = new Uint8Array(0);
+                let base32Carry = new Uint8Array(0);
+
+                for await (const chunk of FileProcessor.processInChunks(
+                    file,
+                    chunkSize,
                     (progress) => {
-                        progressFill.style.width = `${progress * 0.5}%`;
-                        progressText.textContent = `讀取檔案: ${Math.round(progress)}%`;
+                        progressFill.style.width = `${progress}%`;
+                        progressText.textContent = `處理中: ${Math.round(progress)}%`;
                     }
-                );
-                
-                showStatus('encodeStatus', '🔐 正在編碼...', 'info');
-                progressText.textContent = '正在編碼...';
-                
-                let encodedString;
-                switch (format) {
-                    case 'base64':
-                        encodedString = await arrayBufferToBase64(arrayBuffer);
-                        break;
-                    case 'hex':
-                        encodedString = arrayBufferToHex(arrayBuffer);
-                        break;
-                    case 'base32':
-                        encodedString = arrayBufferToBase32(arrayBuffer);
-                        break;
-                    default:
-                        throw new Error('不支援的編碼格式');
+                )) {
+                    switch (format) {
+                        case 'base64': {
+                            const res = encodeBase64Chunk(chunk, base64Carry);
+                            encodedString += res.output;
+                            base64Carry = res.carry;
+                            break;
+                        }
+                        case 'hex':
+                            encodedString += Array.from(chunk, byte => byte.toString(16).padStart(2, '0')).join('');
+                            break;
+                        case 'base32': {
+                            const res = encodeBase32Chunk(chunk, base32Carry);
+                            encodedString += res.output;
+                            base32Carry = res.carry;
+                            break;
+                        }
+                        default:
+                            throw new Error('不支援的編碼格式');
+                    }
                 }
-                
+
+                if (format === 'base64') {
+                    encodedString += finalizeBase64(base64Carry);
+                } else if (format === 'base32') {
+                    encodedString += finalizeBase32(base32Carry);
+                }
+
                 progressFill.style.width = '100%';
                 progressText.textContent = '編碼完成!';
                 
