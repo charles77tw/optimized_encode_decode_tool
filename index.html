@@ -1201,7 +1201,8 @@
                 }
                 
                 for (let j = 0; j < 8; j++) {
-                    if (i === bytes.length - 1 && j >= Math.ceil(chunk.length * 8 / 5)) {
+                    if (j >= Math.ceil(chunk.length * 8 / 5)) {
+                        // 對於不足 5 位元組的最後一塊，需要補 '=' 做為填充
                         result += '=';
                     } else {
                         const index = (value >>> (35 - j * 5)) & 0x1F;
