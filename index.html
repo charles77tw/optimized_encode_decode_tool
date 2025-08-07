@@ -1135,26 +1135,30 @@
         // 工具函數
         class FileProcessor {
             static async *processInChunks(file, chunkSize = 10 * 1024 * 1024, progressCallback) {
-                const totalChunks = Math.ceil(file.size / chunkSize);
+                const reader = file.stream().getReader();
+                let bytesRead = 0;
 
-                for (let i = 0; i < totalChunks; i++) {
-                    if (currentAbortController?.signal.aborted) {
-                        throw new Error('操作已取消');
+                try {
+                    while (true) {
+                        if (currentAbortController?.signal.aborted) {
+                            await reader.cancel();
+                            throw new Error('操作已取消');
+                        }
+
+                        const { value, done } = await reader.read();
+                        if (done) break;
+
+                        bytesRead += value.length;
+                        if (progressCallback) {
+                            progressCallback(bytesRead / file.size * 100);
+                        }
+
+                        yield value;
+
+                        await new Promise(resolve => queueMicrotask(resolve));
                     }
-
-                    const start = i * chunkSize;
-                    const end = Math.min(start + chunkSize, file.size);
-                    const chunk = file.slice(start, end);
-                    const arrayBuffer = await chunk.arrayBuffer();
-
-                    if (progressCallback) {
-                        progressCallback((i + 1) / totalChunks * 100);
-                    }
-
-                    // 讓瀏覽器有機會更新UI
-                    await new Promise(resolve => setTimeout(resolve, 0));
-
-                    yield new Uint8Array(arrayBuffer);
+                } finally {
+                    reader.releaseLock();
                 }
             }
 
