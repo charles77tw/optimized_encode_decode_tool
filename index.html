@@ -2414,21 +2414,26 @@
         });
 
         // 批次處理功能
-        async function batchProcessFiles(files, operation) {
+        async function batchProcessFiles(files, operation, concurrency = 3) {
             const results = [];
             const totalFiles = files.length;
-            
-            for (let i = 0; i < totalFiles; i++) {
-                const file = files[i];
-                try {
-                    showStatus('encodeStatus', `處理檔案 ${i + 1}/${totalFiles}: ${file.name}`, 'info');
-                    const result = await operation(file);
-                    results.push({ file: file.name, success: true, result });
-                } catch (error) {
-                    results.push({ file: file.name, success: false, error: error.message });
-                }
+
+            for (let i = 0; i < totalFiles; i += concurrency) {
+                const batch = files.slice(i, i + concurrency);
+                const batchPromises = batch.map((file, index) => (async () => {
+                    const fileIndex = i + index;
+                    try {
+                        showStatus('encodeStatus', `處理檔案 ${fileIndex + 1}/${totalFiles}: ${file.name}`, 'info');
+                        const result = await operation(file);
+                        return { file: file.name, success: true, result };
+                    } catch (error) {
+                        return { file: file.name, success: false, error: error.message };
+                    }
+                })());
+                const batchResults = await Promise.all(batchPromises);
+                results.push(...batchResults);
             }
-            
+
             return results;
         }
 
