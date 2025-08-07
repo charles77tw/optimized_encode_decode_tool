@@ -1741,7 +1741,8 @@
                 }
 
                 const uint8 = new Uint8Array(arrayBuffer);
-                if (autoDecompress || (uint8[0] === 0x1f && uint8[1] === 0x8b)) {
+                const isGzip = uint8[0] === 0x1f && uint8[1] === 0x8b;
+                if (autoDecompress && isGzip) {
                     showStatus('decodeStatus', '🔓 正在解碼並解壓...', 'info');
                     progressFill.style.width = '50%';
                     progressText.textContent = '正在解壓縮...';
@@ -1751,6 +1752,8 @@
                     } catch (e) {
                         throw new Error('解壓縮失敗：' + e.message);
                     }
+                } else if (autoDecompress && !isGzip) {
+                    showToast('資料非 gzip 壓縮，跳過解壓', 'warning');
                 }
 
                 progressFill.style.width = '75%';
