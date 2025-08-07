@@ -843,6 +843,13 @@
                         </label>
                         <br>
                         <label>
+                            <input type="checkbox" id="enableCompression"> 在編碼前進行 gzip 壓縮
+                        </label>
+                        <div style="font-size: 0.9em; margin-left: 24px; opacity: 0.7;">
+                            壓縮會增加 CPU 使用率但可能減少輸出大小
+                        </div>
+                        <br>
+                        <label>
                             <input type="checkbox" id="enableEncryption" onclick="document.getElementById('encryptionPassword').style.display = this.checked ? 'block' : 'none';"> 啟用加密
                         </label>
                         <input type="password" id="encryptionPassword" placeholder="輸入密碼" style="display:none; margin-top:5px;">
@@ -952,6 +959,13 @@
                         <label>
                             <input type="checkbox" id="autoDetectFormat" checked> 自動偵測格式
                         </label>
+                        <br>
+                        <label>
+                            <input type="checkbox" id="decompressGzip" checked> 若為 gzip 壓縮則自動解壓
+                        </label>
+                        <div style="font-size: 0.9em; margin-left: 24px; opacity: 0.7;">
+                            解壓縮需額外 CPU 資源
+                        </div>
                         <br>
                         <label>
                             <input type="checkbox" id="enableDecryption" onclick="document.getElementById('decryptionPassword').style.display = this.checked ? 'block' : 'none';"> 啟用解密
@@ -1380,6 +1394,7 @@
             const format = document.querySelector('input[name="encodeFormat"]:checked').value;
             const chunkSize = parseInt(document.getElementById('encodeChunkSize').value) * 1024 * 1024;
             const addTimestamp = document.getElementById('addTimestamp').checked;
+            const enableCompression = document.getElementById('enableCompression').checked;
             
             processingStartTime = Date.now();
             currentAbortController = new AbortController();
@@ -1478,8 +1493,25 @@
                 return result;
             };
 
-            showStatus('encodeStatus', '🔐 正在編碼...', 'info');
-            progressText.textContent = '正在編碼...';
+            const compressChunk = async (chunk) => {
+                if (typeof CompressionStream !== 'undefined') {
+                    const cs = new CompressionStream('gzip');
+                    const writer = cs.writable.getWriter();
+                    await writer.write(chunk);
+                    await writer.close();
+                    const compressed = await new Response(cs.readable).arrayBuffer();
+                    return new Uint8Array(compressed);
+                }
+                throw new Error('瀏覽器不支援 gzip 壓縮');
+            };
+
+            if (enableCompression) {
+                showStatus('encodeStatus', '🔐 正在壓縮並編碼...', 'info');
+                progressText.textContent = '正在壓縮並編碼...';
+            } else {
+                showStatus('encodeStatus', '🔐 正在編碼...', 'info');
+                progressText.textContent = '正在編碼...';
+            }
 
             try {
                 let encodedString = '';
@@ -1494,18 +1526,23 @@
                         progressText.textContent = `處理中: ${Math.round(progress)}%`;
                     }
                 )) {
+                    let dataChunk = chunk;
+                    if (enableCompression) {
+                        dataChunk = await compressChunk(chunk);
+                    }
+
                     switch (format) {
                         case 'base64': {
-                            const res = encodeBase64Chunk(chunk, base64Carry);
+                            const res = encodeBase64Chunk(dataChunk, base64Carry);
                             encodedString += res.output;
                             base64Carry = res.carry;
                             break;
                         }
                         case 'hex':
-                            encodedString += Array.from(chunk, byte => byte.toString(16).padStart(2, '0')).join('');
+                            encodedString += Array.from(dataChunk, byte => byte.toString(16).padStart(2, '0')).join('');
                             break;
                         case 'base32': {
-                            const res = encodeBase32Chunk(chunk, base32Carry);
+                            const res = encodeBase32Chunk(dataChunk, base32Carry);
                             encodedString += res.output;
                             base32Carry = res.carry;
                             break;
@@ -1628,6 +1665,7 @@
             let format = document.querySelector('input[name="decodeFormat"]:checked').value;
             const validateIntegrity = document.getElementById('validateIntegrity').checked;
             const autoDetect = document.getElementById('autoDetectFormat').checked;
+            const autoDecompress = document.getElementById('decompressGzip').checked;
             
             if (format === 'auto' || autoDetect) {
                 format = FileProcessor.detectFormat(encodedText);
@@ -1658,7 +1696,7 @@
                 progressContainer.style.display = 'none';
             };
             
-            showStatus('decodeStatus', '🔓 正在解碼...', 'info');
+            showStatus('decodeStatus', autoDecompress ? '🔓 正在解碼並解壓...' : '🔓 正在解碼...', 'info');
 
             try {
                 progressText.textContent = '解析編碼格式...';
@@ -1666,6 +1704,17 @@
                 
                 await new Promise(resolve => setTimeout(resolve, 100));
                 
+                const decompressBuffer = async (buffer) => {
+                    if (typeof DecompressionStream !== 'undefined') {
+                        const ds = new DecompressionStream('gzip');
+                        const writer = ds.writable.getWriter();
+                        await writer.write(buffer);
+                        await writer.close();
+                        return await new Response(ds.readable).arrayBuffer();
+                    }
+                    throw new Error('瀏覽器不支援 gzip 解壓縮');
+                };
+
                 let arrayBuffer;
                 switch (format) {
                     case 'base64':
@@ -1680,14 +1729,27 @@
                     default:
                         throw new Error('不支援的解碼格式：' + format);
                 }
-                
+
+                const uint8 = new Uint8Array(arrayBuffer);
+                if (autoDecompress || (uint8[0] === 0x1f && uint8[1] === 0x8b)) {
+                    showStatus('decodeStatus', '🔓 正在解碼並解壓...', 'info');
+                    progressFill.style.width = '50%';
+                    progressText.textContent = '正在解壓縮...';
+                    try {
+                        arrayBuffer = await decompressBuffer(uint8);
+                        showToast('已進行 gzip 解壓', 'info');
+                    } catch (e) {
+                        throw new Error('解壓縮失敗：' + e.message);
+                    }
+                }
+
                 progressFill.style.width = '75%';
                 progressText.textContent = '驗證資料完整性...';
-                
+
                 if (validateIntegrity && arrayBuffer.byteLength === 0) {
                     throw new Error('解碼後資料為空');
                 }
-                
+
                 progressFill.style.width = '100%';
                 progressText.textContent = '解碼完成!';
                 
