@@ -886,14 +886,14 @@
 
                 <div id="encodeStatus"></div>
 
-                <textarea id="encodedText" class="text-area" placeholder="編碼結果將顯示在這裡..." readonly></textarea>
+                <textarea id="encodedText" class="text-area" placeholder="編碼結果（JSON 格式）將顯示在這裡..." readonly></textarea>
 
                 <div class="button-group">
                     <button class="button success" onclick="copyEncoded()">
                         📋 複製編碼結果
                     </button>
                     <button class="button" onclick="downloadEncoded()">
-                        💾 下載為文字檔
+                        💾 下載為 JSON 檔
                     </button>
                     <button class="button warning" onclick="validateEncoded()">
                         ✓ 驗證編碼
@@ -974,14 +974,14 @@
                     </div>
                 </div>
 
-                <textarea id="decodeText" class="text-area" placeholder="貼上要解碼的文字內容或從檔案載入..."></textarea>
+                <textarea id="decodeText" class="text-area" placeholder="貼上要解碼的 JSON 內容或從檔案載入..."></textarea>
 
                 <div class="button-group">
                     <button class="button" onclick="decodeText()" id="decodeBtn">
                         🔓 開始解碼
                     </button>
                     <button class="button" onclick="loadFromFile()">
-                        📂 從檔案載入
+                        📂 載入 JSON 檔
                     </button>
                     <button class="button danger" onclick="clearDecode()">
                         🗑️ 清除
@@ -1576,6 +1576,8 @@
                     encodedString = await arrayBufferToBase64(encryptedBuffer);
                 }
 
+                encodedString = JSON.stringify({ filename: file.name, data: encodedString });
+
                 document.getElementById('encodedText').value = encodedString;
                 showStatus('encodeStatus', '✅ 編碼完成！', 'success');
                 showToast('編碼成功完成！', 'success');
@@ -1637,6 +1639,14 @@
                 showStatus('decodeStatus', '❌ 請輸入要解碼的文字', 'error');
                 return;
             }
+
+            try {
+                const parsed = JSON.parse(encodedText);
+                if (parsed && typeof parsed === 'object' && 'filename' in parsed && 'data' in parsed) {
+                    originalFileName = parsed.filename;
+                    encodedText = parsed.data;
+                }
+            } catch (e) {}
 
             const enableDecryption = document.getElementById('enableDecryption').checked;
             if (enableDecryption) {
@@ -1890,12 +1900,19 @@
         }
 
         async function validateEncoded() {
-            const encodedText = document.getElementById('encodedText').value;
+            let encodedText = document.getElementById('encodedText').value;
             if (!encodedText) {
                 showStatus('encodeStatus', '❌ 沒有編碼結果可驗證', 'error');
                 return;
             }
-            
+
+            try {
+                const parsed = JSON.parse(encodedText);
+                if (parsed && typeof parsed === 'object' && 'data' in parsed) {
+                    encodedText = parsed.data;
+                }
+            } catch (e) {}
+
             const format = document.querySelector('input[name="encodeFormat"]:checked').value;
             
             try {
@@ -1959,11 +1976,11 @@
             
             const format = document.querySelector('input[name="encodeFormat"]:checked').value;
             const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-            const filename = originalFileName ? 
-                `${originalFileName.replace(/\.[^/.]+$/, '')}_encoded_${format}_${timestamp}.txt` : 
-                `encoded_${format}_${timestamp}.txt`;
-            
-            const blob = new Blob([encodedText], { type: 'text/plain;charset=utf-8' });
+            const filename = originalFileName ?
+                `${originalFileName.replace(/\.[^/.]+$/, '')}_encoded_${format}_${timestamp}.json` :
+                `encoded_${format}_${timestamp}.json`;
+
+            const blob = new Blob([encodedText], { type: 'application/json;charset=utf-8' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
@@ -1977,7 +1994,7 @@
 
         function loadFromFile() {
             const hiddenFileInput = document.getElementById('hiddenFileInput');
-            hiddenFileInput.accept = '.txt,.dat,.base64,.hex';
+            hiddenFileInput.accept = '.json,.txt,.dat,.base64,.hex';
             hiddenFileInput.onchange = function(e) {
                 const file = e.target.files[0];
                 if (file) {
