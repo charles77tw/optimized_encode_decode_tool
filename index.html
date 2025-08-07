@@ -1521,14 +1521,16 @@
                     i.toString(16).padStart(2, '0')
                 );
 
-                for await (const chunk of FileProcessor.processInChunks(
-                    file,
-                    chunkSize,
-                    (progress) => {
-                        progressFill.style.width = `${progress}%`;
-                        progressText.textContent = `處理中: ${Math.round(progress)}%`;
-                    }
-                )) {
+                    for await (const chunk of FileProcessor.processInChunks(
+                        file,
+                        chunkSize,
+                        (progress) => {
+                            requestAnimationFrame(() => {
+                                progressFill.style.width = `${progress}%`;
+                                progressText.textContent = `處理中: ${Math.round(progress)}%`;
+                            });
+                        }
+                    )) {
                     let dataChunk = chunk;
                     if (enableCompression) {
                         dataChunk = await compressChunk(chunk);
@@ -1563,8 +1565,10 @@
                     encodedString += finalizeBase32(base32Carry);
                 }
 
-                progressFill.style.width = '100%';
-                progressText.textContent = '編碼完成!';
+                requestAnimationFrame(() => {
+                    progressFill.style.width = '100%';
+                    progressText.textContent = '編碼完成!';
+                });
                 
                 if (addTimestamp) {
                     const timestamp = new Date().toISOString();
