@@ -2254,18 +2254,29 @@
                 info: 'ℹ️',
                 warning: '⚠️'
             };
-            
-            statusElement.innerHTML = `
-                <div class="status-message status-${type}">
-                    ${iconMap[type] || ''} ${message}
-                </div>
-            `;
-            
+            statusElement.textContent = '';
+
+            const wrapper = document.createElement('div');
+            wrapper.className = `status-message status-${type}`;
+
+            if (iconMap[type]) {
+                const iconSpan = document.createElement('span');
+                iconSpan.textContent = iconMap[type];
+                wrapper.appendChild(iconSpan);
+                wrapper.appendChild(document.createTextNode(' '));
+            }
+
+            const messageSpan = document.createElement('span');
+            messageSpan.textContent = message;
+            wrapper.appendChild(messageSpan);
+
+            statusElement.appendChild(wrapper);
+
             // 自動清除成功和錯誤訊息
             if (type === 'success' || type === 'error') {
                 setTimeout(() => {
-                    if (statusElement.innerHTML.includes(message)) {
-                        statusElement.innerHTML = '';
+                    if (statusElement.contains(wrapper)) {
+                        statusElement.textContent = '';
                     }
                 }, 5000);
             }
